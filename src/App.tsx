@@ -56,6 +56,7 @@ export const GlobalContext = createContext<GlobalContextType | null>(null);
 
 // const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
 
+
 function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -65,7 +66,8 @@ function App() {
     const fetchUser = async () => {
       try {
         // console.log("Backend URL:", BACKEND_URL);
-        const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/me`, {
+        const backendUrl = import.meta.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000';
+        const res = await fetch(`${backendUrl}/api/auth/me`, {
           credentials: "include", // To include cookies for authentication
         });
         if (res.ok) {

@@ -15,7 +15,7 @@ export function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
+  
     try {
       const response = await fetch('/api/users/login', {
         method: 'POST',
@@ -24,15 +24,27 @@ export function LoginPage() {
         },
         body: JSON.stringify(formData),
       });
-
-      const data = await response.json();
+  
+      // Add error logging
+      console.log('Response status:', response.status);
+      const responseText = await response.text();
+      console.log('Response body:', responseText);
+  
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('Failed to parse response:', parseError);
+        toast.error('Server response was not in the expected format');
+        return;
+      }
+  
       if (response.ok) {
         toast.success('Login successful!');
-        // Save the JWT token in localStorage or state for authenticated requests
         localStorage.setItem('token', data.token);
         navigate('/dashboard');
       } else {
-        toast.error(data.message);
+        toast.error(data.message || 'Login failed');
       }
     } catch (error) {
       console.error('Error during login:', error);

@@ -2,7 +2,7 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const User = require('../models/User'); // Import the User model
+const User = require('../models/User');
 
 const router = express.Router();
 
@@ -42,6 +42,11 @@ router.post('/login', async (req, res) => {
   const { email, password } = req.body;
 
   try {
+    // Verify JWT_SECRET exists
+    if (!process.env.JWT_SECRET) {
+      throw new Error('JWT_SECRET is not defined');
+    }
+
     // Check if the user exists
     const user = await User.findOne({ email });
     if (!user) {
@@ -55,14 +60,24 @@ router.post('/login', async (req, res) => {
     }
 
     // Generate JWT token
-    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
-      expiresIn: '1h', // Token expires in 1 hour
-    });
+    const token = jwt.sign(
+      { userId: user._id }, 
+      process.env.JWT_SECRET, 
+      { expiresIn: '1h' }
+    );
 
-    res.status(200).json({ message: 'Login successful!', token });
+    res.status(200).json({ 
+      message: 'Login successful!', 
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email
+      }
+    });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Login error:', err);
+    res.status(500).json({ message: err.message || 'Server error' });
   }
 });
 
