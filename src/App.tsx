@@ -40,6 +40,7 @@ import { Toaster } from "react-hot-toast";
 import { Header } from "./components/Header";
 import { Footer } from "./components/Footer";
 import { HomePage } from "./pages/HomePage";
+import { AuthProvider } from './AuthContext';
 import { LoginPage } from "./pages/LoginPage";
 import { SignupPage } from "./pages/SignupPage";
 import { FindCandidatesPage } from "./pages/FindCandidatesPage";
@@ -93,6 +94,7 @@ function App() {
   return (
     <GlobalContext.Provider value={{ user, setUser }}>
       <BrowserRouter>
+      <AuthProvider>
         <div className="min-h-screen bg-slate-900 flex flex-col">
           <Header />
           <main className="flex-grow">
@@ -107,6 +109,7 @@ function App() {
           <Footer />
           <Toaster position="top-right" />
         </div>
+        </AuthProvider>
       </BrowserRouter>
     </GlobalContext.Provider>
   );

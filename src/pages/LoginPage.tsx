@@ -1,13 +1,13 @@
-// login page.tsx
-
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { FormInput } from '../components/FormInput';
+import { useAuth } from '../AuthContext';
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const { login } = useAuth(); // Use the login function from AuthContext
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -15,7 +15,7 @@ export function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-  
+
     try {
       const response = await fetch('/api/users/login', {
         method: 'POST',
@@ -24,24 +24,13 @@ export function LoginPage() {
         },
         body: JSON.stringify(formData),
       });
-  
-      // Add error logging
-      console.log('Response status:', response.status);
-      const responseText = await response.text();
-      console.log('Response body:', responseText);
-  
-      let data;
-      try {
-        data = JSON.parse(responseText);
-      } catch (parseError) {
-        console.error('Failed to parse response:', parseError);
-        toast.error('Server response was not in the expected format');
-        return;
-      }
-  
+
+      const data = await response.json();
+
       if (response.ok) {
         toast.success('Login successful!');
         localStorage.setItem('token', data.token);
+        login({ name: data.user.name, email: data.user.email }); // Set user info in context
         navigate('/dashboard');
       } else {
         toast.error(data.message || 'Login failed');
