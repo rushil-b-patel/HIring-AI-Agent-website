@@ -45,9 +45,16 @@ import { SignupPage } from "./pages/SignupPage";
 import { FindCandidatesPage } from "./pages/FindCandidatesPage";
 import { DashboardPage } from "./pages/DashboardPage";
 
-// Create a global context to share data across components
-export const GlobalContext = createContext(null);
-const BACKEND_URL = process.env.local.NEXT_PUBLIC_BACKEND_URL;
+// Define the type for the context
+interface GlobalContextType {
+  user: any; // Replace `any` with the actual user type if available
+  setUser: React.Dispatch<React.SetStateAction<any>>; // Replace `any` with the user type
+}
+
+// Create the context with proper typing
+export const GlobalContext = createContext<GlobalContextType | null>(null);
+
+// const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
 
 function App() {
   const [user, setUser] = useState(null);
@@ -57,8 +64,8 @@ function App() {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        console.log("Backend URL:", BACKEND_URL);
-        const res = await fetch(`${BACKEND_URL}/api/auth/me`, {
+        // console.log("Backend URL:", BACKEND_URL);
+        const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/me`, {
           credentials: "include", // To include cookies for authentication
         });
         if (res.ok) {

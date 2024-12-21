@@ -4,29 +4,61 @@ const cors = require("cors");
 const bodyParser = require("body-parser");
 const dotenv = require("dotenv");
 
+// Load environment variables
 dotenv.config();
 
 const app = express();
 
-// Middleware
-app.use(cors());
+// Enhanced Middleware setup
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  credentials: true
+}));
+app.use(express.json());
 app.use(bodyParser.json());
 
-// MongoDB Connection
-mongoose
-  .connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
-  .then(() => console.log("Connected to MongoDB"))
-  .catch((err) => console.error("MongoDB connection error:", err));
+// Import routes before using them
+const userRoutes = require("./routes/users");
+
+// Routes
+app.use("/api/users", userRoutes);
 
 // Test Route
 app.get("/", (req, res) => {
-  res.send("API is running...");
+  res.json({ message: "API is running..." });
 });
 
-// Start the Server
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+// MongoDB Connection with better error handling
+const connectDB = async () => {
+  try {
+    await mongoose.connect(process.env.MONGO_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true
+    });
+    console.log("Connected to MongoDB");
+  } catch (error) {
+    console.error("MongoDB connection error:", error);
+    process.exit(1); // Exit process with failure
+  }
+};
 
-const userRoutes = require("./routes/users");
+// Start server only after DB connection
+const startServer = async () => {
+  try {
+    await connectDB();
+    const PORT = process.env.PORT || 5000;
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+    });
+  } catch (error) {
+    console.error("Server startup error:", error);
+  }
+};
 
-app.use("/api/users", userRoutes);
+startServer();
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ message: "Something broke!" });
+});

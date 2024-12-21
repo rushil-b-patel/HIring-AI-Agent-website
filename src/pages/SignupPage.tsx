@@ -1,3 +1,5 @@
+// signup page.tsx
+
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, User } from 'lucide-react';
@@ -12,11 +14,29 @@ export function SignupPage() {
     password: '',
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Add your signup logic here
-    toast.success('Account created successfully!');
-    navigate('/login');
+
+    try {
+      const response = await fetch('/api/users/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        toast.success('Account created successfully!');
+        navigate('/login');
+      } else {
+        toast.error(data.message);
+      }
+    } catch (error) {
+      console.error('Error during signup:', error);
+      toast.error('An error occurred. Please try again.');
+    }
   };
 
   return (

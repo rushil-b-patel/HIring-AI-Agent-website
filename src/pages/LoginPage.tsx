@@ -1,3 +1,5 @@
+// login page.tsx
+
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock } from 'lucide-react';
@@ -11,11 +13,31 @@ export function LoginPage() {
     password: '',
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Add your login logic here
-    toast.success('Login successful!');
-    navigate('/dashboard');
+
+    try {
+      const response = await fetch('/api/users/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        toast.success('Login successful!');
+        // Save the JWT token in localStorage or state for authenticated requests
+        localStorage.setItem('token', data.token);
+        navigate('/dashboard');
+      } else {
+        toast.error(data.message);
+      }
+    } catch (error) {
+      console.error('Error during login:', error);
+      toast.error('An error occurred. Please try again.');
+    }
   };
 
   return (
