@@ -1,11 +1,8 @@
-# hiring_agent.py
-import imaplib
-import re
 import google.generativeai as genai
 import email
+from email.header import decode_header
 import os
 import datetime
-from email.header import decode_header
 import uuid
 import time
 import shutil
@@ -13,16 +10,33 @@ from PyPDF2 import PdfReader
 import json
 import argparse
 import sys
+import requests
+import imaplib
+
+os.environ['GENAI_API_KEY'] = 'AIzaSyDfEQRE5YZTcuYGcJSqPDfIcGB2XzA8Lig'
+
+# Now you can use the API key
+genai.configure(api_key=os.getenv("GENAI_API_KEY"))
+
+def send_status_update(message):
+    try:
+        requests.get(f'http://localhost:5000/api/candidates/status?message={message}')
+    except Exception as e:
+        print(f"Failed to send status update: {str(e)}", file=sys.stderr)
 
 def login_to_gmail(email_user, email_password):
+    send_status_update("Logging in to Gmail...")
     try:
         mail = imaplib.IMAP4_SSL("imap.gmail.com", 993)
         mail.login(email_user, email_password)
+        send_status_update("Successfully logged in to Gmail.")
         return mail
     except Exception as e:
+        send_status_update(f"Failed to login: {str(e)}")
         raise Exception(f"Failed to login: {str(e)}")
 
 def search_emails_with_subject_and_attachments(mail, subject_filter, start_date, end_date):
+    send_status_update("Searching emails with subject and attachments...")
     try:
         mail.select("inbox")
         start_date_obj = datetime.datetime.strptime(start_date, "%Y-%m-%d")
@@ -51,14 +65,16 @@ def search_emails_with_subject_and_attachments(mail, subject_filter, start_date,
                         if part.get_content_disposition() == "attachment":
                             email_ids.append(email_id)
                             break
+            send_status_update("Emails found.")
             return email_ids
         else:
+            send_status_update("No emails found.")
             return []
     except Exception as e:
+        send_status_update(f"Error searching emails: {str(e)}")
         raise Exception(f"Error searching emails: {str(e)}")
 
 def clear_folder(folder_path):
-    """Delete all files in the specified folder."""
     if os.path.exists(folder_path):
         for file_name in os.listdir(folder_path):
             file_path = os.path.join(folder_path, file_name)
@@ -71,6 +87,7 @@ def clear_folder(folder_path):
                 raise Exception(f"Failed to delete {file_path}: {str(e)}")
 
 def fetch_attachments(mail, email_ids, dest_folder):
+    send_status_update("Fetching attachments...")
     resume_extensions = [".pdf", ".doc", ".docx"]
     
     clear_folder(dest_folder)
@@ -94,9 +111,12 @@ def fetch_attachments(mail, email_ids, dest_folder):
                             with open(filepath, "wb") as f:
                                 f.write(part.get_payload(decode=True))
         except Exception as e:
+            send_status_update(f"Error processing email ID: {str(e)}")
             raise Exception(f"Error processing email ID: {str(e)}")
+    send_status_update("Attachments fetched.")
 
 def extract_text_from_pdfs(folder_path):
+    send_status_update("Extracting text from PDFs...")
     resumes = []
     for file_name in os.listdir(folder_path):
         if file_name.endswith(".pdf"):
@@ -107,9 +127,23 @@ def extract_text_from_pdfs(folder_path):
                 resumes.append({"file_name": file_name, "text": text})
             except Exception as e:
                 print(f"Error processing {file_name}: {str(e)}", file=sys.stderr)
+    send_status_update("Text extracted from PDFs.")
     return resumes
 
+def extract_skills(resume_text):
+    # Predefined list of skills
+    skills_list = [
+        "Python", "Java", "C++", "JavaScript", "SQL", "HTML", "CSS", "Machine Learning",
+        "Data Analysis", "Project Management", "Communication", "Teamwork", "Problem Solving",
+        "Leadership", "Time Management", "Adaptability", "Creativity", "Critical Thinking"
+    ]
+    
+    # Extract skills mentioned in the resume text
+    skills = [skill for skill in skills_list if skill.lower() in resume_text.lower()]
+    return skills
+
 def find_top_candidates(resumes, job_description, num_candidates):
+    send_status_update("Finding top candidates...")
     genai.configure(api_key=os.getenv("GENAI_API_KEY"))
     
     prompt_template = """
@@ -141,16 +175,14 @@ def find_top_candidates(resumes, job_description, num_candidates):
             score_match = re.search(r"Score:\s*(\d+)", response_text)
             score = int(score_match.group(1)) if score_match else 0
 
-            reasons_match = re.search(r"Detailed Reasons:\n(.*?)(?:\n\n|$)", response_text, re.DOTALL)
-            reasons = reasons_match.group(1).strip() if reasons_match else "Detailed evaluation not available."
-
-            advantage_match = re.search(r"Comparative Advantage:\s*(.+)", response_text)
-            comparative_advantage = advantage_match.group(1).strip() if advantage_match else "No specific advantage noted."
+            reasons_match = re.search(r"Reasons:\s*(.+)", response_text, re.DOTALL)
+            reasons = reasons_match.group(1).strip() if reasons_match else "No specific reasons noted."
 
             candidates.append({
-                'file_name': resume['file_name'],
+                'name': resume['file_name'],  # Use the file name as the candidate's name
+                'skills': extract_skills(resume['text']),  # Extract skills from resume text
+                'relevance': f"{score}%",  # Use the score as the relevance percentage
                 'score': score,
-                'comparative_advantage': comparative_advantage,
                 'reasons': reasons,
                 'resume_text': resume['text']
             })
@@ -159,6 +191,7 @@ def find_top_candidates(resumes, job_description, num_candidates):
             print(f"Error processing resume {resume['file_name']}: {str(e)}", file=sys.stderr)
 
     candidates.sort(key=lambda x: x['score'], reverse=True)
+    send_status_update("Top candidates found.")
     return candidates[:num_candidates]
 
 def main():
@@ -174,14 +207,11 @@ def main():
     args = parser.parse_args()
 
     try:
-        # Create temp directory if it doesn't exist
         dest_folder = os.path.join(os.path.dirname(__file__), "temp_resumes")
         os.makedirs(dest_folder, exist_ok=True)
 
-        # Login to Gmail
         mail = login_to_gmail(args.email, args.password)
         
-        # Search for emails
         email_ids = search_emails_with_subject_and_attachments(
             mail, 
             args.subject, 
@@ -193,29 +223,25 @@ def main():
             print(json.dumps([]))
             return
 
-        # Process attachments
         fetch_attachments(mail, email_ids, dest_folder)
 
-        # Extract text from PDFs
         resumes = extract_text_from_pdfs(dest_folder)
 
-        # Find top candidates
         candidates = find_top_candidates(
             resumes,
             args.job_description,
             args.num_candidates
         )
 
-        # Convert to JSON and print to stdout
         print(json.dumps(candidates))
 
     except Exception as e:
+        send_status_update(f"Error: {str(e)}")
         print(json.dumps({
             "error": str(e)
         }), file=sys.stderr)
         sys.exit(1)
     finally:
-        # Cleanup
         if 'dest_folder' in locals():
             clear_folder(dest_folder)
 
