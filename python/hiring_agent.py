@@ -65,7 +65,7 @@ def search_emails_with_subject_and_attachments(mail, subject_filter, start_date,
                         if part.get_content_disposition() == "attachment":
                             email_ids.append(email_id)
                             break
-            send_status_update("Emails found.")
+            send_status_update(f"Emails found: {len(email_ids)}")
             return email_ids
         else:
             send_status_update("No emails found.")
@@ -127,7 +127,7 @@ def extract_text_from_pdfs(folder_path):
                 resumes.append({"file_name": file_name, "text": text})
             except Exception as e:
                 print(f"Error processing {file_name}: {str(e)}", file=sys.stderr)
-    send_status_update("Text extracted from PDFs.")
+    send_status_update(f"Text extracted from {len(resumes)} PDFs.")
     return resumes
 
 def extract_skills(resume_text):
@@ -144,7 +144,7 @@ def extract_skills(resume_text):
 
 def find_top_candidates(resumes, job_description, num_candidates):
     send_status_update("Finding top candidates...")
-    genai.configure(api_key=os.getenv("GENAI_API_KEY"))
+    # genai.configure(api_key=os.getenv("GENAI_API_KEY"))
     
     prompt_template = """
     You are an AI model evaluating resumes. Compare each resume against the following job description:
@@ -209,8 +209,10 @@ def main():
     try:
         dest_folder = os.path.join(os.path.dirname(__file__), "temp_resumes")
         os.makedirs(dest_folder, exist_ok=True)
+        print("done")
 
         mail = login_to_gmail(args.email, args.password)
+        print("done")
         
         email_ids = search_emails_with_subject_and_attachments(
             mail, 

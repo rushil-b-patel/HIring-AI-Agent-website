@@ -1,4 +1,4 @@
-import React from 'react';
+// import React from 'react';
 import { Github, Twitter, Linkedin } from 'lucide-react';
 
 export function Footer() {
