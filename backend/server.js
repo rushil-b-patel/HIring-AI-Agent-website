@@ -62,3 +62,159 @@ app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({ message: "Something broke!" });
 });
+
+
+
+// // server.js
+// const express = require("express");
+// const mongoose = require("mongoose");
+// const cors = require("cors");
+// const bodyParser = require("body-parser");
+// const dotenv = require("dotenv");
+// const { spawn } = require('child_process');
+// const path = require('path');
+
+// dotenv.config();
+
+// const app = express();
+
+// app.use(cors({
+//   origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+//   credentials: true
+// }));
+// app.use(express.json());
+// app.use(bodyParser.json());
+
+// // Import routes
+// const userRoutes = require("./routes/users");
+// const candidateRoutes = require("./routes/candidates"); // New route file
+
+// // Routes
+// app.use("/api/users", userRoutes);
+// app.use("/api/candidates", candidateRoutes); // Add candidate routes
+
+// // Create the candidates route handler (routes/candidates.js)
+// const router = express.Router();
+
+// router.post("/find", async (req, res) => {
+//   try {
+//     const {
+//       email,
+//       password,
+//       jobRole,
+//       jobDescription,
+//       startDate,
+//       endDate,
+//       candidatesRequired
+//     } = req.body;
+
+//     // Spawn Python process with the hiring agent script
+//     const pythonProcess = spawn('python', [
+//       path.join(__dirname, '../python/hiring_agent.py'),
+//       '--email', email,
+//       '--password', password,
+//       '--subject', jobRole, // Using jobRole as subject filter
+//       '--start-date', startDate,
+//       '--end-date', endDate,
+//       '--job-description', jobDescription,
+//       '--num-candidates', candidatesRequired
+//     ]);
+
+//     let dataString = '';
+//     let errorString = '';
+
+//     pythonProcess.stdout.on('data', (data) => {
+//       dataString += data.toString();
+//     });
+
+//     pythonProcess.stderr.on('data', (data) => {
+//       errorString += data.toString();
+//     });
+
+//     pythonProcess.on('close', (code) => {
+//       if (code !== 0) {
+//         console.error('Python script error:', errorString);
+//         return res.status(500).json({ 
+//           error: 'Candidate processing failed',
+//           details: errorString
+//         });
+//       }
+
+//       try {
+//         const results = JSON.parse(dataString);
+//         res.json({
+//           success: true,
+//           candidates: results
+//         });
+//       } catch (error) {
+//         res.status(500).json({ 
+//           error: 'Failed to parse results',
+//           details: error.message 
+//         });
+//       }
+//     });
+
+//   } catch (error) {
+//     console.error('Server error:', error);
+//     res.status(500).json({ 
+//       error: 'Internal server error',
+//       details: error.message 
+//     });
+//   }
+// });
+
+// module.exports = router;
+
+// // Update your FindCandidatesPage.tsx to use the new endpoint
+// const handleSubmit = async (e) => {
+//   e.preventDefault();
+  
+//   try {
+//     const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/candidates/find`, {
+//       method: 'POST',
+//       headers: {
+//         'Content-Type': 'application/json',
+//       },
+//       body: JSON.stringify(formData),
+//     });
+
+//     if (!response.ok) {
+//       const errorData = await response.json();
+//       throw new Error(errorData.error || 'Failed to fetch candidates');
+//     }
+
+//     const data = await response.json();
+//     if (data.success) {
+//       toast.success('Candidates found successfully!');
+//       // Store candidates in state or context
+//       // You might want to create a separate context for candidates
+//       navigate('/dashboard', { state: { candidates: data.candidates } });
+//     }
+//   } catch (error) {
+//     toast.error(error.message || 'Failed to fetch candidates');
+//     console.error('Error:', error);
+//   }
+// };
+
+
+// // Update MongoDB Schema (models/Candidate.js)
+// const mongoose = require('mongoose');
+
+// const candidateSchema = new mongoose.Schema({
+//   fileName: String,
+//   score: Number,
+//   comparativeAdvantage: String,
+//   reasons: String,
+//   resumeText: String,
+//   jobRole: String,
+//   processedDate: {
+//     type: Date,
+//     default: Date.now
+//   },
+//   userId: {
+//     type: mongoose.Schema.Types.ObjectId,
+//     ref: 'User'
+//   }
+// });
+
+// module.exports = mongoose.model('Candidate', candidateSchema);

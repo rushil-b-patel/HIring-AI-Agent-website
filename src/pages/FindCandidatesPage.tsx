@@ -1,13 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { useAuth } from '../AuthContext'; // Import AuthContext hook
 import { FormInput } from '../components/FormInput';
 import { FormTextArea } from '../components/FormTextArea';
 
 export function FindCandidatesPage() {
   const navigate = useNavigate();
+  const { user } = useAuth(); // Fetch user details from AuthContext
   const [formData, setFormData] = useState({
+    email: '',
+    password: '',
     jobRole: '',
     jobDescription: '',
     startDate: '',
@@ -15,14 +19,29 @@ export function FindCandidatesPage() {
     candidatesRequired: '',
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Initialize formData with user credentials if logged in
+  useEffect(() => {
+    if (user) {
+      setFormData((prevData) => ({
+        ...prevData,
+        email: user.email || '',
+         // Assuming password is stored securely in user object
+      }));
+    } else {
+      toast.error('Please log in to access this page.');
+      navigate('/login'); // Redirect to login page
+    }
+  }, [user, navigate]);
+
+  const handleSubmit = (e: { preventDefault: () => void; }) => {
     e.preventDefault();
     toast.success('Fetching candidates...');
+    console.log('Form Data:', formData); // Debugging: Check submitted data
     navigate('/dashboard');
   };
 
-  return (
-    <div className="min-h-screen py-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-slate-900 to-slate-800 mt-16"> {/* Add margin-top here */}
+  return user ? ( // Render only if user is authenticated
+    <div className="min-h-screen py-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-slate-900 to-slate-800 mt-16">
       <div className="max-w-2xl mx-auto space-y-8 bg-slate-800/50 p-8 rounded-2xl backdrop-blur-lg border border-slate-700">
         <div>
           <h2 className="text-center text-3xl font-extrabold text-white">
@@ -30,6 +49,22 @@ export function FindCandidatesPage() {
           </h2>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+          {/* Email Field */}
+          <FormInput
+            label="Email"
+            type="email"
+            value={formData.email}
+            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+            required
+          />
+          {/* Password Field */}
+          <FormInput
+            label="Password"
+            type="password"
+            value={formData.password}
+            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+            required
+          />
           <FormInput
             label="Job Role"
             value={formData.jobRole}
@@ -77,5 +112,5 @@ export function FindCandidatesPage() {
         </form>
       </div>
     </div>
-  );
+  ) : null; // Return null while redirecting
 }
