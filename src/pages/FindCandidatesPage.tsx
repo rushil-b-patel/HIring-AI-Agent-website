@@ -45,7 +45,7 @@ export function FindCandidatesPage() {
     };
 
     try {
-      const response = await fetch('/api/candidates/find', {
+      const response = await fetch('http://localhost:5000/api/candidates/find', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
