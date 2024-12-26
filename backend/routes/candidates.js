@@ -1,6 +1,8 @@
 const express = require('express');
 const { spawn } = require('child_process');
 const path = require('path');
+const mongoose = require('mongoose');
+const Candidate = require('../models/Candidate');
 
 const router = express.Router();
 
@@ -39,7 +41,7 @@ router.post('/find', async (req, res) => {
     errorString += data.toString();
   });
 
-  pythonProcess.on('close', (code) => {
+  pythonProcess.on('close', async (code) => {
     if (code !== 0) {
       console.error('Python script error:', errorString);
       clients.forEach(client => client.res.write(`data: ${errorString}\n\n`));
@@ -49,6 +51,10 @@ router.post('/find', async (req, res) => {
     try {
       const results = JSON.parse(dataString);
       clients.forEach(client => client.res.write(`data: Candidates found successfully!\n\n`));
+
+      // Save candidates to MongoDB
+      await Candidate.insertMany(results);
+
       res.json({ success: true, candidates: results });
     } catch (error) {
       console.error('Failed to parse results:', error.message);
@@ -63,10 +69,15 @@ router.get('/status', (req, res) => {
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
 
-  clients.push({ id: Date.now(), res });
+  const clientId = Date.now();
+  const newClient = {
+    id: clientId,
+    res
+  };
+  clients.push(newClient);
 
   req.on('close', () => {
-    clients = clients.filter(client => client.id !== req.id);
+    clients = clients.filter(client => client.id !== clientId);
   });
 });
 
